@@ -1,10 +1,10 @@
-# Kipflow Consulta
+# Fenix Search
 
 Aplicação Next.js para consultas de dados empresariais e pessoais via API [Kipflow](https://docs.kipflow.io/).
 
 ## Funcionalidades
 
-- **Empresa por CNPJ/domínio** – Dados cadastrais da Receita Federal
+- **Empresa por CNPJ** – Dados cadastrais e datasets selecionáveis; exportação Excel
 - **Busca avançada** – Filtros por situação, UF, município, razão social
 - **Consulta CPF** – Dados de pessoa física
 - **Telefones** – Busca telefones de empresa por CNPJ ou domínio
