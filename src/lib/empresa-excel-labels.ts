@@ -137,7 +137,8 @@ export const PROCESSO_COL_PT = [
   "Status do processo",
   "Data de arquivamento",
   "Ramo do direito",
-  "Partes",
+  "POLO ATIVO PRINCIPAL",
+  "POLO PASSIVO PRINCIPAL",
 ] as const;
 
 export const BASIC_KEYS = [

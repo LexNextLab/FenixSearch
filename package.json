@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:export": "tsx src/lib/legal-processos-export.test.ts",
     "import-users": "tsx scripts/import-office-users.ts",
     "seed-leonardo": "tsx scripts/seed-leonardo.ts"
   },

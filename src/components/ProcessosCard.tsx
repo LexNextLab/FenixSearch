@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { LegalProcessoItem, LegalProcessoValorCausa } from "@/lib/kipflow";
+import { processoToCsvRow } from "@/lib/legal-processos-export";
+import { PROCESSO_COL_PT } from "@/lib/empresa-excel-labels";
 import { FileDown } from "lucide-react";
 
 /** Formata número de processo no padrão CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO */
@@ -77,8 +79,8 @@ function getPoloEmpresa(p: LegalProcessoItem, cnpjClean: string): "ativo" | "pas
       || (parteCnpj && parteCnpj.startsWith(cnpjRaiz));
     if (match) {
       const polo = (parte.polo ?? "").toUpperCase();
-      if (polo.includes("ATIVO")) return "ativo";
       if (polo.includes("PASSIVO")) return "passivo";
+      if (polo.includes("ATIVO")) return "ativo";
     }
   }
   return "outro";
@@ -92,59 +94,10 @@ function escapeCsvCell(val: string | number | null | undefined): string {
   return s;
 }
 
-function processoToExcelRow(p: LegalProcessoItem, cnpjClean: string): string[] {
-  const valor = formatValorCausa(p.valorCausa);
-  const assuntos = p.assuntosCNJ?.filter((a) => a.ePrincipal).map((a) => a.titulo).join("; ")
-    ?? p.assuntosCNJ?.[0]?.titulo
-    ?? p.assunto;
-  const polo = getPoloEmpresa(p, cnpjClean);
-  const area = getArea(p);
-  const partes = (p.partes ?? []).map((pt) => `${pt.tipo ?? ""}: ${pt.nome ?? ""} (${pt.polo ?? ""})`).join("; ");
-  return [
-    formatProcessoNumero(p),
-    p.tribunal ?? "",
-    p.uf ?? "",
-    p.segmento ?? "",
-    p.dataDistribuicao ? formatData(p.dataDistribuicao) : "",
-    valor ?? "",
-    assuntos ?? "",
-    p.classeProcessual?.nome ?? "",
-    p.juiz ?? "",
-    p.orgaoJulgador ?? "",
-    p.urlProcesso ?? "",
-    polo,
-    area,
-    p.statusPredictus?.statusProcesso ?? "",
-    p.statusPredictus?.dataArquivamento ? formatData(p.statusPredictus.dataArquivamento) : "",
-    p.statusPredictus?.ramoDireito ?? "",
-    partes,
-  ];
-}
-
-const EXCEL_COLUMNS = [
-  "Número",
-  "Tribunal",
-  "UF",
-  "Segmento",
-  "Data Distribuição",
-  "Valor da Causa",
-  "Assunto",
-  "Classe Processual",
-  "Juiz",
-  "Órgão Julgador",
-  "URL",
-  "Polo Empresa",
-  "Área",
-  "Status",
-  "Data Arquivamento",
-  "Ramo Direito",
-  "Partes",
-];
-
 function exportProcessosToExcel(processos: LegalProcessoItem[], cnpjClean: string) {
-  const rows = [EXCEL_COLUMNS.join(";")];
+  const rows = [[...PROCESSO_COL_PT].join(";")];
   for (const p of processos) {
-    const row = processoToExcelRow(p, cnpjClean).map(escapeCsvCell).join(";");
+    const row = processoToCsvRow(p, cnpjClean).map(escapeCsvCell).join(";");
     rows.push(row);
   }
   const csv = "\uFEFF" + rows.join("\r\n");

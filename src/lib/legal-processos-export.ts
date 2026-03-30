@@ -53,6 +53,55 @@ export function formatLegalProcessoData(data: string | undefined): string {
   }
 }
 
+/** Ano da distribuição no formato AAAA (ex.: 2026). */
+export function formatDataDistribuicaoAno(data: string | undefined): string {
+  if (!data) return "";
+  const d = new Date(data);
+  if (!Number.isNaN(d.getTime())) return String(d.getFullYear());
+  const m = String(data).match(/\b(19|20)\d{2}\b/);
+  return m ? m[0] : "";
+}
+
+function classifyPoloParte(poloRaw: string | undefined): "ativo" | "passivo" | "neither" {
+  const polo = (poloRaw ?? "").toUpperCase().trim();
+  if (polo.includes("PASSIVO")) return "passivo";
+  if (polo.includes("ATIVO")) return "ativo";
+  return "neither";
+}
+
+/**
+ * Polos a partir da lista `partes`, na ordem em que aparecem na API:
+ * nomes únicos com polo ATIVO e com polo PASSIVO, separados por "; ".
+ */
+export function formatPolosPrincipaisFromPartes(
+  partes: LegalProcessoItem["partes"]
+): { poloAtivoPrincipal: string; poloPassivoPrincipal: string } {
+  const ativos: string[] = [];
+  const passivos: string[] = [];
+  const seenAtivo = new Set<string>();
+  const seenPassivo = new Set<string>();
+  for (const pt of partes ?? []) {
+    const nome = (pt.nome ?? "").replace(/\s+/g, " ").trim();
+    if (!nome) continue;
+    const kind = classifyPoloParte(pt.polo);
+    if (kind === "ativo") {
+      if (!seenAtivo.has(nome)) {
+        seenAtivo.add(nome);
+        ativos.push(nome);
+      }
+    } else if (kind === "passivo") {
+      if (!seenPassivo.has(nome)) {
+        seenPassivo.add(nome);
+        passivos.push(nome);
+      }
+    }
+  }
+  return {
+    poloAtivoPrincipal: ativos.join("; "),
+    poloPassivoPrincipal: passivos.join("; "),
+  };
+}
+
 export function getAreaProcesso(p: LegalProcessoItem): string {
   const ramo = p.statusPredictus?.ramoDireito;
   if (ramo) return ramo;
@@ -76,8 +125,8 @@ export function getPoloEmpresa(p: LegalProcessoItem, cnpjClean: string): "ativo"
       (parteCnpj && parteCnpj.startsWith(cnpjRaiz));
     if (match) {
       const polo = (parte.polo ?? "").toUpperCase();
-      if (polo.includes("ATIVO")) return "ativo";
       if (polo.includes("PASSIVO")) return "passivo";
+      if (polo.includes("ATIVO")) return "ativo";
     }
   }
   return "outro";
@@ -108,7 +157,8 @@ export const PROCESSOS_CSV_COLUMNS = [
   "Status",
   "Data Arquivamento",
   "Ramo Direito",
-  "Partes",
+  "POLO ATIVO PRINCIPAL",
+  "POLO PASSIVO PRINCIPAL",
 ] as const;
 
 export function processoToCsvRow(p: LegalProcessoItem, cnpjClean: string): string[] {
@@ -119,15 +169,13 @@ export function processoToCsvRow(p: LegalProcessoItem, cnpjClean: string): strin
     p.assunto;
   const polo = getPoloEmpresa(p, cnpjClean);
   const area = getAreaProcesso(p);
-  const partes = (p.partes ?? [])
-    .map((pt) => `${pt.tipo ?? ""}: ${pt.nome ?? ""} (${pt.polo ?? ""})`)
-    .join("; ");
+  const { poloAtivoPrincipal, poloPassivoPrincipal } = formatPolosPrincipaisFromPartes(p.partes);
   return [
     formatProcessoNumero(p),
     p.tribunal ?? "",
     p.uf ?? "",
     p.segmento ?? "",
-    p.dataDistribuicao ? formatLegalProcessoData(p.dataDistribuicao) : "",
+    formatDataDistribuicaoAno(p.dataDistribuicao),
     valor ?? "",
     assuntos ?? "",
     p.classeProcessual?.nome ?? "",
@@ -141,7 +189,8 @@ export function processoToCsvRow(p: LegalProcessoItem, cnpjClean: string): strin
       ? formatLegalProcessoData(p.statusPredictus.dataArquivamento)
       : "",
     p.statusPredictus?.ramoDireito ?? "",
-    partes,
+    poloAtivoPrincipal,
+    poloPassivoPrincipal,
   ];
 }
 
